@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+mangum
+jinja2
+python-multipart
+amazon-paapi
+psycopg2-binary

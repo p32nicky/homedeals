@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ p.title }} — {{ site_title }}{% endblock %}
+{% block content %}
+<div class="product-page">
+  {% if p.image_url %}
+  <img src="{{ p.image_url }}" alt="{{ p.title }}" class="product-img"/>
+  {% endif %}
+  <div class="product-info">
+    {% if p.savings_percent %}<span class="badge big">{{ p.savings_percent|int }}% OFF</span>{% endif %}
+    <h1>{{ p.title }}</h1>
+    <div class="price-row big">
+      {% if p.price %}<span class="price">${{ "%.2f"|format(p.price) }}</span>{% endif %}
+      {% if p.original_price %}<span class="orig">${{ "%.2f"|format(p.original_price) }}</span>{% endif %}
+    </div>
+    {% if p.savings %}<div class="save">You save ${{ "%.2f"|format(p.savings) }}</div>{% endif %}
+    {% if p.description %}<p class="desc">{{ p.description }}</p>{% endif %}
+    <a class="btn-buy" href="{{ p.url }}" target="_blank" rel="nofollow">View Deal on Amazon →</a>
+    <p class="disclaimer">As an Amazon Associate we earn from qualifying purchases.</p>
+  </div>
+</div>
+{% endblock %}

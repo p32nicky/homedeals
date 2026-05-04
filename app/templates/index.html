@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero">
+  <h1>Best Amazon Deals — Home, DIY & Organization</h1>
+  <p>Updated daily. Click to buy on Amazon.</p>
+</div>
+
+{% if total == 0 %}
+<div class="empty">No deals yet — check back soon!</div>
+{% else %}
+<p class="count">{{ total }} deals found{% if query %} for "{{ query }}"{% endif %}</p>
+<div class="grid">
+  {% for p in products %}
+  <a class="card" href="/product/{{ p.asin }}" target="_blank">
+    {% if p.image_url %}
+    <div class="card-img"><img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy"/></div>
+    {% endif %}
+    {% if p.savings_percent %}
+    <span class="badge">{{ p.savings_percent|int }}% OFF</span>
+    {% endif %}
+    <div class="card-body">
+      <h2>{{ p.title }}</h2>
+      <div class="price-row">
+        {% if p.price %}<span class="price">${{ "%.2f"|format(p.price) }}</span>{% endif %}
+        {% if p.original_price %}<span class="orig">${{ "%.2f"|format(p.original_price) }}</span>{% endif %}
+      </div>
+      {% if p.savings %}<div class="save">Save ${{ "%.2f"|format(p.savings) }}</div>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}<a href="?q={{ query }}&page={{ page - 1 }}">&laquo; Prev</a>{% endif %}
+  <span>Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}<a href="?q={{ query }}&page={{ page + 1 }}">Next &raquo;</a>{% endif %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
