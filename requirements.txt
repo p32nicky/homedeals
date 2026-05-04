@@ -3,5 +3,5 @@ uvicorn
 mangum
 jinja2
 python-multipart
-amazon-paapi
+python-amazon-paapi
 psycopg2-binary

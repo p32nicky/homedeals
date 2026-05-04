@@ -44,7 +44,7 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
     try:
         from amazon_paapi import AmazonApi
     except ImportError:
-        logger.error("amazon-paapi not installed. Run: pip install amazon-paapi")
+        logger.error("python-amazon-paapi not installed. Run: pip install python-amazon-paapi")
         return []
 
     api = AmazonApi(access_key, secret_key, associate_tag, "US")
