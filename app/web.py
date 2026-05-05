@@ -59,9 +59,7 @@ async def product_detail(request: Request, asin: str):
 
 @app.get("/feed.xml")
 async def rss_feed():
-    day = datetime.now(timezone.utc).timetuple().tm_yday
-    daily_offset = (day - 1) * 10
-    products = get_latest_products(settings.db_path, limit=10, offset=daily_offset)
+    products = get_latest_products(settings.db_path, limit=100, offset=0)
 
     rss = Element("rss", version="2.0")
     rss.set("xmlns:media", "http://search.yahoo.com/mrss/")
