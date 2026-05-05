@@ -3,10 +3,10 @@ import os
 from datetime import datetime, timezone, timedelta
 from xml.etree.ElementTree import Element, SubElement, tostring
 
+import jinja2
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.db import init_db, list_products, get_latest_products, get_product_by_asin
@@ -21,7 +21,16 @@ app = FastAPI(title=settings.site_title)
 
 BASE_DIR = os.path.dirname(__file__)
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+_jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.join(BASE_DIR, "templates")),
+    autoescape=True,
+)
+
+
+def render(name: str, **ctx) -> HTMLResponse:
+    html = _jinja_env.get_template(name).render(**ctx)
+    return HTMLResponse(html)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -33,15 +42,11 @@ async def index(
     per_page = 24
     rows, total = list_products(settings.db_path, query=q, page=page, per_page=per_page)
     total_pages = max(1, (total + per_page - 1) // per_page)
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "products": rows,
-        "query": q,
-        "page": page,
-        "total": total,
-        "total_pages": total_pages,
-        "site_title": settings.site_title,
-    })
+    return render("index.html",
+        products=rows, query=q, page=page,
+        total=total, total_pages=total_pages,
+        site_title=settings.site_title,
+    )
 
 
 @app.get("/product/{asin}", response_class=HTMLResponse)
@@ -49,11 +54,7 @@ async def product_detail(request: Request, asin: str):
     product = get_product_by_asin(settings.db_path, asin)
     if not product:
         return HTMLResponse("Product not found", status_code=404)
-    return templates.TemplateResponse("product.html", {
-        "request": request,
-        "p": product,
-        "site_title": settings.site_title,
-    })
+    return render("product.html", p=product, site_title=settings.site_title)
 
 
 @app.get("/feed.xml")
@@ -93,7 +94,7 @@ async def rss_feed():
                 price_info += f" (was ${p['original_price']:.2f})"
         SubElement(item, "description").text = (
             f"{desc}<br/>{price_info}<br/>"
-            f'<a href="{p["url"]}">View on Amazon →</a>'
+            f'<a href="{p[\"url\"]}">View on Amazon →</a>'
         )
 
         if p.get("image_url"):
