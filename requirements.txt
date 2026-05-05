@@ -3,5 +3,6 @@ uvicorn
 mangum
 jinja2==3.1.4
 python-multipart
-curl_cffi
+feedparser
+httpx
 psycopg2-binary
