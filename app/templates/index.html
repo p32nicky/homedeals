@@ -12,9 +12,7 @@
 <div class="grid">
   {% for p in products %}
   <a class="card" href="/product/{{ p.asin }}" target="_blank">
-    {% if p.image_url %}
-    <div class="card-img"><img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy"/></div>
-    {% endif %}
+    <div class="card-img"><img src="{{ p.image_url or 'https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN=' + p.asin + '&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=SL500' }}" alt="{{ p.title }}" loading="lazy"/></div>
     {% if p.savings_percent %}
     <span class="badge">{{ p.savings_percent|int }}% OFF</span>
     {% endif %}
