@@ -58,7 +58,6 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
                 keywords=keywords,
                 search_index=search_index,
                 item_count=10,
-                resources=RESOURCES,
             )
             items = _safe(response, "search_result", "items") or []
             for item in items:
