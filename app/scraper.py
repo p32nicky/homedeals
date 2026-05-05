@@ -47,7 +47,8 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
         logger.error("python-amazon-paapi not installed. Run: pip install python-amazon-paapi")
         return []
 
-    api = AmazonApi(access_key, secret_key, associate_tag, "US")
+    api = AmazonApi(access_key, secret_key, associate_tag, "US", throttling=0.9)
+    logger.info(f"API init: tag={associate_tag}, key={access_key[:4]}...")
     now = datetime.now(timezone.utc).isoformat()
     results = []
     seen_asins = set()
