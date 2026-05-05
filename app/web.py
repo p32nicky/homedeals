@@ -92,9 +92,10 @@ async def rss_feed():
             price_info = f"Now: ${p['price']:.2f}"
             if p.get("original_price"):
                 price_info += f" (was ${p['original_price']:.2f})"
+        p_url = p["url"]
         SubElement(item, "description").text = (
             f"{desc}<br/>{price_info}<br/>"
-            f'<a href="{p[\"url\"]}">View on Amazon →</a>'
+            f'<a href="{p_url}">View on Amazon →</a>'
         )
 
         if p.get("image_url"):
