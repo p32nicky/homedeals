@@ -41,13 +41,19 @@ def post_products(products: list[dict], app_password: str) -> int:
                 text = f"🏠 {title[:180]}\n{price_info}\n\n{p['url']}"
 
             # Build link card embed
+            # Upload image — skip post if it fails
             thumb_blob = None
             if p.get("image_url"):
                 try:
                     img_data = httpx.get(p["image_url"], timeout=8, follow_redirects=True).content
-                    thumb_blob = client.upload_blob(img_data).blob
+                    if img_data[:4] in (b'\xff\xd8\xff\xe0', b'\xff\xd8\xff\xe1', b'\x89PNG', b'GIF8', b'RIFF', b'WEBP'):
+                        thumb_blob = client.upload_blob(img_data).blob
                 except Exception:
                     pass
+
+            if not thumb_blob:
+                logger.info(f"Skipping (no valid image): {title[:50]}")
+                continue
 
             embed = models.AppBskyEmbedExternal.Main(
                 external=models.AppBskyEmbedExternal.External(
