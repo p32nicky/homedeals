@@ -47,7 +47,7 @@ def main():
     if bluesky_password and inserted > 0:
         # Get the newly inserted items
         new_asins = [it["asin"] for it in items][-inserted:] if inserted else []
-        new_items = [it for it in items if it["asin"] in new_asins][:10]  # max 10/run
+        new_items = [it for it in items if it["asin"] in new_asins and it.get("image_url")][:10]  # max 10/run, images only
         print(f"Posting {len(new_items)} new items to Bluesky...")
         posted = post_products(new_items, bluesky_password)
         print(f"Posted {posted} to Bluesky.")
