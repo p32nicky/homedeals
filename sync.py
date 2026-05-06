@@ -42,6 +42,7 @@ def main():
         print("No products scraped.")
 
     # Post unposted products to Bluesky (up to 10/day)
+    print(f"Bluesky password set: {bool(bluesky_password)}")
     if bluesky_password:
         unposted = get_unposted_products(settings.db_path, limit=10)
         print(f"Found {len(unposted)} unposted products with images for Bluesky...")
