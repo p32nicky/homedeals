@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS products (
     category TEXT,
     description TEXT,
     first_seen_at TEXT,
-    last_seen_at TEXT
+    last_seen_at TEXT,
+    bluesky_posted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_asin ON products(asin);
 """
@@ -73,7 +74,8 @@ CREATE TABLE IF NOT EXISTS products (
     category TEXT,
     description TEXT,
     first_seen_at TEXT,
-    last_seen_at TEXT
+    last_seen_at TEXT,
+    bluesky_posted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_asin ON products(asin);
 """
@@ -86,6 +88,14 @@ def init_db(db_path: str) -> None:
         except OSError:
             pass
     with _get_conn(db_path) as conn:
+        # Add bluesky_posted_at column if missing (migration)
+        try:
+            if USE_POSTGRES:
+                conn.cursor().execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS bluesky_posted_at TEXT")
+            else:
+                conn.execute("ALTER TABLE products ADD COLUMN bluesky_posted_at TEXT")
+        except Exception:
+            pass
         sql = _CREATE_PG if USE_POSTGRES else _CREATE_SQLITE
         for stmt in sql.strip().split(";"):
             stmt = stmt.strip()
@@ -191,6 +201,32 @@ def get_latest_products(db_path: str, limit: int = 10, offset: int = 0):
         return _rows(conn,
             f"SELECT * FROM products ORDER BY id LIMIT {ph} OFFSET {ph}",
             (limit, safe_offset))
+
+
+def get_unposted_products(db_path: str, limit: int = 10) -> list[dict]:
+    """Get products not yet posted to Bluesky, prioritising those with images."""
+    ph = "%s" if USE_POSTGRES else "?"
+    with _get_conn(db_path) as conn:
+        return _rows(conn,
+            f"SELECT * FROM products WHERE bluesky_posted_at IS NULL AND image_url IS NOT NULL AND image_url != '' ORDER BY id LIMIT {ph}",
+            (limit,))
+
+
+def mark_bluesky_posted(db_path: str, asins: list[str]) -> None:
+    if not asins:
+        return
+    ph = "%s" if USE_POSTGRES else "?"
+    now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+    placeholders = ",".join([ph] * len(asins))
+    with _get_conn(db_path) as conn:
+        if USE_POSTGRES:
+            conn.cursor().execute(
+                f"UPDATE products SET bluesky_posted_at={ph} WHERE asin IN ({placeholders})",
+                (now, *asins))
+        else:
+            conn.execute(
+                f"UPDATE products SET bluesky_posted_at=? WHERE asin IN ({placeholders})",
+                (now, *asins))
 
 
 def get_products_by_asins(db_path: str, asins: list[str]) -> list[dict]:

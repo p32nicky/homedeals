@@ -1,9 +1,8 @@
 """
 Daily sync — run via GitHub Actions.
-Scrapes deals, upserts to DB, posts new items to Bluesky.
+Scrapes deals, upserts to DB, posts unposted items to Bluesky.
 """
 import os
-import sys
 
 # Load .env for local runs
 env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -16,7 +15,7 @@ if os.path.exists(env_path):
                 os.environ.setdefault(k.strip(), v.strip())
 
 from app.config import get_settings
-from app.db import init_db, upsert_products, get_products_by_asins
+from app.db import init_db, upsert_products, get_unposted_products, mark_bluesky_posted
 from app.scraper import scrape_deals
 from app.bluesky import post_products
 
@@ -36,23 +35,26 @@ def main():
     )
     print(f"Scraped {len(items)} products")
 
-    if not items:
-        print("No products scraped.")
-        return
-
-    inserted = upsert_products(settings.db_path, items)
-    print(f"Inserted {inserted} new products.")
-
-    # Post new products to Bluesky
-    if bluesky_password and inserted > 0:
-        # Get the newly inserted items
-        new_asins = [it["asin"] for it in items][-inserted:] if inserted else []
-        new_items = [it for it in items if it["asin"] in new_asins and it.get("image_url")][:10]  # max 10/run, images only
-        print(f"Posting {len(new_items)} new items to Bluesky...")
-        posted = post_products(new_items, bluesky_password)
-        print(f"Posted {posted} to Bluesky.")
+    if items:
+        inserted = upsert_products(settings.db_path, items)
+        print(f"Inserted {inserted} new products.")
     else:
-        print("No new products to post to Bluesky." if inserted == 0 else "BLUESKY_APP_PASSWORD not set.")
+        print("No products scraped.")
+
+    # Post unposted products to Bluesky (up to 10/day)
+    if bluesky_password:
+        unposted = get_unposted_products(settings.db_path, limit=10)
+        print(f"Found {len(unposted)} unposted products with images for Bluesky...")
+        if unposted:
+            posted = post_products(list(unposted), bluesky_password)
+            posted_asins = [p["asin"] for p in list(unposted)[:posted]]
+            if posted_asins:
+                mark_bluesky_posted(settings.db_path, posted_asins)
+            print(f"Posted {posted} to Bluesky.")
+        else:
+            print("All products already posted to Bluesky.")
+    else:
+        print("BLUESKY_APP_PASSWORD not set — skipping Bluesky.")
 
     print("Done.")
 
