@@ -1,6 +1,6 @@
 """
 Daily sync — run via GitHub Actions.
-Scrapes Amazon PA-API and upserts to database.
+Scrapes deals, upserts to DB, posts new items to Bluesky.
 """
 import os
 import sys
@@ -16,20 +16,19 @@ if os.path.exists(env_path):
                 os.environ.setdefault(k.strip(), v.strip())
 
 from app.config import get_settings
-from app.db import init_db, upsert_products
+from app.db import init_db, upsert_products, get_products_by_asins
 from app.scraper import scrape_deals
+from app.bluesky import post_products
 
 
 def main():
     settings = get_settings()
-    if not settings.amazon_access_key or not settings.amazon_secret_key:
-        print("ERROR: AMAZON_ACCESS_KEY and AMAZON_SECRET_KEY required")
-        sys.exit(1)
+    bluesky_password = os.environ.get("BLUESKY_APP_PASSWORD", "")
 
     print("Initialising DB...")
     init_db(settings.db_path)
 
-    print("Scraping Amazon deals...")
+    print("Scraping deals...")
     items = scrape_deals(
         settings.amazon_access_key,
         settings.amazon_secret_key,
@@ -37,11 +36,25 @@ def main():
     )
     print(f"Scraped {len(items)} products")
 
-    if items:
-        inserted = upsert_products(settings.db_path, items)
-        print(f"Inserted {inserted} new products. Done.")
-    else:
+    if not items:
         print("No products scraped.")
+        return
+
+    inserted = upsert_products(settings.db_path, items)
+    print(f"Inserted {inserted} new products.")
+
+    # Post new products to Bluesky
+    if bluesky_password and inserted > 0:
+        # Get the newly inserted items
+        new_asins = [it["asin"] for it in items][-inserted:] if inserted else []
+        new_items = [it for it in items if it["asin"] in new_asins][:10]  # max 10/run
+        print(f"Posting {len(new_items)} new items to Bluesky...")
+        posted = post_products(new_items, bluesky_password)
+        print(f"Posted {posted} to Bluesky.")
+    else:
+        print("No new products to post to Bluesky." if inserted == 0 else "BLUESKY_APP_PASSWORD not set.")
+
+    print("Done.")
 
 
 if __name__ == "__main__":

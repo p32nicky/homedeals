@@ -193,6 +193,15 @@ def get_latest_products(db_path: str, limit: int = 10, offset: int = 0):
             (limit, safe_offset))
 
 
+def get_products_by_asins(db_path: str, asins: list[str]) -> list[dict]:
+    if not asins:
+        return []
+    ph = "%s" if USE_POSTGRES else "?"
+    placeholders = ",".join([ph] * len(asins))
+    with _get_conn(db_path) as conn:
+        return _rows(conn, f"SELECT * FROM products WHERE asin IN ({placeholders})", tuple(asins))
+
+
 def get_product_by_asin(db_path: str, asin: str) -> Optional[dict]:
     ph = "%s" if USE_POSTGRES else "?"
     with _get_conn(db_path) as conn:
