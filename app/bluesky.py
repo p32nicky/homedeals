@@ -45,9 +45,9 @@ def post_products(products: list[dict], app_password: str) -> int:
             thumb_blob = None
             if p.get("image_url"):
                 try:
-                    img_data = httpx.get(p["image_url"], timeout=8, follow_redirects=True).content
-                    if img_data[:4] in (b'\xff\xd8\xff\xe0', b'\xff\xd8\xff\xe1', b'\x89PNG', b'GIF8', b'RIFF', b'WEBP'):
-                        thumb_blob = client.upload_blob(img_data).blob
+                    resp = httpx.get(p["image_url"], timeout=8, follow_redirects=True)
+                    if resp.headers.get("content-type", "").startswith("image/"):
+                        thumb_blob = client.upload_blob(resp.content).blob
                 except Exception:
                     pass
 

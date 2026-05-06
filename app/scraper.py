@@ -122,9 +122,8 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
                 seen_asins.add(asin)
 
                 image_url = _extract_image(entry)
-                # Fallback: use Amazon's image widget URL (always works with ASIN)
-                if not image_url:
-                    image_url = f"https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN={asin}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=SL500"
+                # Always use Amazon's direct image URL by ASIN
+                image_url = f"https://images-na.ssl-images-amazon.com/images/P/{asin}.01.LZZZZZZZ.jpg"
                 full_text_for_price = title + " " + summary
                 price = _extract_price(full_text_for_price)
                 savings_pct = _extract_savings_pct(full_text_for_price)
