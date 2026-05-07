@@ -79,6 +79,6 @@ def post_products(products: list[dict], app_password: str) -> int:
             time.sleep(2)
 
         except Exception as e:
-            logger.warning(f"Failed to post {p.get('asin')}: {e}")
+            print(f"BLUESKY ERROR {p.get('asin')}: {type(e).__name__}: {e}")
 
     return posted
