@@ -208,7 +208,7 @@ def get_unposted_products(db_path: str, limit: int = 10) -> list[dict]:
     ph = "%s" if USE_POSTGRES else "?"
     with _get_conn(db_path) as conn:
         return _rows(conn,
-            f"SELECT * FROM products WHERE bluesky_posted_at IS NULL AND image_url IS NOT NULL AND image_url != '' ORDER BY id LIMIT {ph}",
+            f"SELECT * FROM products WHERE bluesky_posted_at IS NULL ORDER BY id LIMIT {ph}",
             (limit,))
 
 

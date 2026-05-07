@@ -61,10 +61,6 @@ def post_products(products: list[dict], app_password: str) -> int:
                 except Exception:
                     pass
 
-            if not thumb_blob:
-                logger.info(f"Skipping (no valid image): {title[:50]}")
-                continue
-
             embed = models.AppBskyEmbedExternal.Main(
                 external=models.AppBskyEmbedExternal.External(
                     uri=p["url"],
