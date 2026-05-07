@@ -46,7 +46,17 @@ def post_products(products: list[dict], app_password: str) -> int:
             if p.get("image_url"):
                 try:
                     resp = httpx.get(p["image_url"], timeout=8, follow_redirects=True)
-                    if resp.headers.get("content-type", "").startswith("image/"):
+                    if len(resp.content) > 2000:
+                        thumb_blob = client.upload_blob(resp.content).blob
+                except Exception:
+                    pass
+
+            if not thumb_blob:
+                # Try fallback image URL format
+                try:
+                    fallback = f"https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN={p['asin']}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=SL500"
+                    resp = httpx.get(fallback, timeout=8, follow_redirects=True)
+                    if len(resp.content) > 2000:
                         thumb_blob = client.upload_blob(resp.content).blob
                 except Exception:
                     pass
