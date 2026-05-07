@@ -70,9 +70,10 @@ def post_products(products: list[dict], app_password: str) -> int:
                 )
             )
 
+            print(f"Posting [{posted+1}]: {title[:50]} | thumb={thumb_blob is not None}")
             client.send_post(text=text, embed=embed)
             posted += 1
-            logger.info(f"Posted to Bluesky: {title[:50]}")
+            print(f"OK [{posted}]")
 
             # Small delay to avoid rate limits
             import time
