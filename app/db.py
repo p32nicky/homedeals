@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     first_seen_at TEXT,
     last_seen_at TEXT,
-    bluesky_posted_at TEXT
+    bluesky_posted_at TEXT,
+    tumblr_posted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_asin ON products(asin);
 """
@@ -75,7 +76,8 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     first_seen_at TEXT,
     last_seen_at TEXT,
-    bluesky_posted_at TEXT
+    bluesky_posted_at TEXT,
+    tumblr_posted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_asin ON products(asin);
 """
@@ -89,13 +91,14 @@ def init_db(db_path: str) -> None:
             pass
     with _get_conn(db_path) as conn:
         # Add bluesky_posted_at column if missing (migration)
-        try:
-            if USE_POSTGRES:
-                conn.cursor().execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS bluesky_posted_at TEXT")
-            else:
-                conn.execute("ALTER TABLE products ADD COLUMN bluesky_posted_at TEXT")
-        except Exception:
-            pass
+        for col in ["bluesky_posted_at", "tumblr_posted_at"]:
+            try:
+                if USE_POSTGRES:
+                    conn.cursor().execute(f"ALTER TABLE products ADD COLUMN IF NOT EXISTS {col} TEXT")
+                else:
+                    conn.execute(f"ALTER TABLE products ADD COLUMN {col} TEXT")
+            except Exception:
+                pass
         sql = _CREATE_PG if USE_POSTGRES else _CREATE_SQLITE
         for stmt in sql.strip().split(";"):
             stmt = stmt.strip()
@@ -226,6 +229,31 @@ def mark_bluesky_posted(db_path: str, asins: list[str]) -> None:
         else:
             conn.execute(
                 f"UPDATE products SET bluesky_posted_at=? WHERE asin IN ({placeholders})",
+                (now, *asins))
+
+
+def get_untumblrd_products(db_path: str, limit: int = 25) -> list[dict]:
+    ph = "%s" if USE_POSTGRES else "?"
+    with _get_conn(db_path) as conn:
+        return _rows(conn,
+            f"SELECT * FROM products WHERE tumblr_posted_at IS NULL ORDER BY id LIMIT {ph}",
+            (limit,))
+
+
+def mark_tumblr_posted(db_path: str, asins: list[str]) -> None:
+    if not asins:
+        return
+    ph = "%s" if USE_POSTGRES else "?"
+    now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+    placeholders = ",".join([ph] * len(asins))
+    with _get_conn(db_path) as conn:
+        if USE_POSTGRES:
+            conn.cursor().execute(
+                f"UPDATE products SET tumblr_posted_at={ph} WHERE asin IN ({placeholders})",
+                (now, *asins))
+        else:
+            conn.execute(
+                f"UPDATE products SET tumblr_posted_at=? WHERE asin IN ({placeholders})",
                 (now, *asins))
 
 

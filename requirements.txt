@@ -6,4 +6,6 @@ python-multipart
 feedparser
 httpx
 atproto
+requests
+requests-oauthlib
 psycopg2-binary
