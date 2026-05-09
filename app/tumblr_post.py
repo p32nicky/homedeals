@@ -50,7 +50,9 @@ def post_products(products: list[dict]) -> int:
                     price_line += f" — Now ${p['price']:.2f}"
 
             desc = _strip_html(p.get("description") or title)
-            short_url = _shorten(p["url"])
+            asin = p.get("asin", "")
+            redirect_url = f"https://homedeals.vercel.app/go/{asin}" if asin else p["url"]
+            short_url = _shorten(redirect_url)
 
             caption = f'<b>{title[:200]}</b>'
             if price_line:

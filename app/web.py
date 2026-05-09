@@ -57,6 +57,14 @@ async def product_detail(request: Request, asin: str):
     return render("product.html", p=product, site_title=settings.site_title)
 
 
+@app.get("/go/{asin}")
+async def go(asin: str):
+    from fastapi.responses import RedirectResponse
+    product = get_product_by_asin(settings.db_path, asin)
+    url = product["url"] if product else f"https://www.amazon.com/dp/{asin}/?tag=nicdav09-20"
+    return RedirectResponse(url=url, status_code=302)
+
+
 @app.get("/feed.xml")
 async def rss_feed():
     day = datetime.now(timezone.utc).timetuple().tm_yday
