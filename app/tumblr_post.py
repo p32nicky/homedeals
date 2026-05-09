@@ -54,11 +54,12 @@ def post_products(products: list[dict]) -> int:
                 data["caption"] = body
 
             resp = requests.post(API_URL, data=data, auth=_auth(), timeout=15)
+            print(f"Tumblr status={resp.status_code} body={resp.text[:300]}")
             if resp.status_code in (200, 201):
                 posted += 1
                 print(f"Tumblr posted [{posted}]: {title[:50]}")
             else:
-                print(f"Tumblr error {resp.status_code}: {resp.text[:200]}")
+                print(f"Tumblr error {resp.status_code}: {resp.text[:300]}")
 
             import time
             time.sleep(1)
