@@ -6,7 +6,7 @@ import time
 import requests
 from requests_oauthlib import OAuth1
 
-BLOG = "amzonhomedeals.tumblr.com"
+BLOG = "amazonguidehome.tumblr.com"
 API_URL = f"https://api.tumblr.com/v2/blog/{BLOG}/post"
 BITLY_TOKEN = "269c53e1b2eb6dcb2035d4d6ecfac4f2105ce35a"
 
