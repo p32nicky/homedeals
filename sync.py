@@ -15,7 +15,7 @@ if os.path.exists(env_path):
                 os.environ.setdefault(k.strip(), v.strip())
 
 from app.config import get_settings
-from app.db import init_db, upsert_products, get_unposted_products, mark_bluesky_posted, get_untumblrd_products, mark_tumblr_posted
+from app.db import init_db, upsert_products, get_unposted_products, mark_bluesky_posted, get_untumblrd_products, mark_tumblr_posted, reset_bluesky_posted
 from app.scraper import scrape_deals
 from app.bluesky import post_products
 from app.tumblr_post import post_products as tumblr_post_products
@@ -41,6 +41,11 @@ def main():
         print(f"Inserted {inserted} new products.")
     else:
         print("No products scraped.")
+
+    # Reset bluesky_posted_at if switching accounts
+    if os.environ.get("RESET_BLUESKY"):
+        reset_bluesky_posted(settings.db_path)
+        print("Reset bluesky_posted_at for all products.")
 
     # Post unposted products to Bluesky (up to 10/day)
     print(f"Bluesky password set: {bool(bluesky_password)}")
