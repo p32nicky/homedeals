@@ -2,7 +2,7 @@
 Post new products to Bluesky via AT Protocol.
 """
 import logging
-import httpx
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ def post_products(products: list[dict], app_password: str) -> int:
     if not products or not app_password:
         return 0
     try:
-        from atproto import Client, models
+        from atproto import Client
     except ImportError:
         logger.error("atproto not installed. Run: pip install atproto")
         return 0
@@ -21,14 +21,15 @@ def post_products(products: list[dict], app_password: str) -> int:
     client = Client()
     try:
         client.login(HANDLE, app_password)
+        print("Bluesky login OK")
     except Exception as e:
-        logger.error(f"Bluesky login failed: {e}")
+        print(f"Bluesky login FAILED: {e}")
         return 0
 
     posted = 0
-    for p in products:
+    for i, p in enumerate(products):
         try:
-            title = p["title"][:100]
+            title = p["title"][:120]
             price_info = ""
             if p.get("savings_percent"):
                 price_info = f"🔥 {int(p['savings_percent'])}% OFF"
@@ -36,50 +37,16 @@ def post_products(products: list[dict], app_password: str) -> int:
                 price_info += f" — Now ${p['price']:.2f}"
 
             text = f"🏠 {title}\n{price_info}\n\n{p['url']}"
-            # Bluesky post max 300 chars
             if len(text) > 300:
-                text = f"🏠 {title[:180]}\n{price_info}\n\n{p['url']}"
+                text = f"🏠 {title[:160]}\n{price_info}\n\n{p['url']}"
 
-            # Build link card embed
-            # Upload image — skip post if it fails
-            thumb_blob = None
-            if p.get("image_url"):
-                try:
-                    resp = httpx.get(p["image_url"], timeout=8, follow_redirects=True)
-                    if len(resp.content) > 2000:
-                        thumb_blob = client.upload_blob(resp.content).blob
-                except Exception:
-                    pass
-
-            if not thumb_blob:
-                # Try fallback image URL format
-                try:
-                    fallback = f"https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&MarketPlace=US&ASIN={p['asin']}&ServiceVersion=20070822&ID=AsinImage&WS=1&Format=SL500"
-                    resp = httpx.get(fallback, timeout=8, follow_redirects=True)
-                    if len(resp.content) > 2000:
-                        thumb_blob = client.upload_blob(resp.content).blob
-                except Exception:
-                    pass
-
-            embed = models.AppBskyEmbedExternal.Main(
-                external=models.AppBskyEmbedExternal.External(
-                    uri=p["url"],
-                    title=title,
-                    description=p.get("description") or title,
-                    thumb=thumb_blob,
-                )
-            )
-
-            print(f"Posting [{posted+1}]: {title[:50]} | thumb={thumb_blob is not None}")
-            client.send_post(text=text, embed=embed)
+            print(f"[{i+1}/{len(products)}] Posting: {title[:50]}")
+            client.send_post(text=text)
             posted += 1
-            print(f"OK [{posted}]")
-
-            # Small delay to avoid rate limits
-            import time
+            print(f"[{i+1}] OK — total posted={posted}")
             time.sleep(2)
 
         except Exception as e:
-            print(f"BLUESKY ERROR {p.get('asin')}: {type(e).__name__}: {e}")
+            print(f"[{i+1}] ERROR {p.get('asin')}: {type(e).__name__}: {e}")
 
     return posted
