@@ -24,6 +24,7 @@ def _strip_html(text: str) -> str:
 
 
 def post_products(products: list[dict]) -> int:
+    print(f"=== TUMBLR v4 NPF API url={NPF_URL} ===")
     posted = 0
     for i, p in enumerate(products):
         try:
