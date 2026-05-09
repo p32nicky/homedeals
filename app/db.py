@@ -240,6 +240,14 @@ def reset_bluesky_posted(db_path: str) -> None:
             conn.execute("UPDATE products SET bluesky_posted_at = NULL")
 
 
+def reset_tumblr_posted(db_path: str) -> None:
+    with _get_conn(db_path) as conn:
+        if USE_POSTGRES:
+            conn.cursor().execute("UPDATE products SET tumblr_posted_at = NULL")
+        else:
+            conn.execute("UPDATE products SET tumblr_posted_at = NULL")
+
+
 def get_untumblrd_products(db_path: str, limit: int = 25) -> list[dict]:
     ph = "%s" if USE_POSTGRES else "?"
     with _get_conn(db_path) as conn:
