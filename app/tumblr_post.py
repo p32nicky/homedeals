@@ -36,9 +36,7 @@ def post_products(products: list[dict]) -> int:
                     price_info += f" — Now <strong>${p['price']:.2f}</strong>"
                 price_info += "</p>"
 
-            img_tag = f'<p><img src="{p["image_url"]}"/></p>' if p.get("image_url") else ""
-            body = f"""{img_tag}
-<h2>{title}</h2>
+            body = f"""<h2>{title}</h2>
 {price_info}
 <p>{p.get('description') or title}</p>
 <p><a href="{p['url']}" target="_blank">👉 View Deal on Amazon</a></p>

@@ -23,3 +23,4 @@ jobs:
           AMAZON_ASSOCIATE_TAG: nicdav09-20
           SITE_URL: https://homedeals.vercel.app
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          RESET_BLUESKY: "1"
