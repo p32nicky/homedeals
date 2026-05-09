@@ -1,11 +1,9 @@
 """
 Post new products to Tumblr via OAuth1.
 """
-import logging
-import httpx
+import time
+import requests
 from requests_oauthlib import OAuth1
-
-logger = logging.getLogger(__name__)
 
 BLOG = "amzonhomedeals.tumblr.com"
 API_URL = f"https://api.tumblr.com/v2/blog/{BLOG}/post"
@@ -20,10 +18,15 @@ def _auth():
     return OAuth1(CONSUMER_KEY, CONSUMER_SECRET, TOKEN, TOKEN_SECRET)
 
 
+def _post(data: dict) -> bool:
+    resp = requests.post(API_URL, data=data, auth=_auth(), timeout=15)
+    print(f"Tumblr status={resp.status_code}")
+    return resp.status_code in (200, 201)
+
+
 def post_products(products: list[dict]) -> int:
-    import requests
     posted = 0
-    for p in products:
+    for i, p in enumerate(products):
         try:
             title = p["title"]
             price_info = ""
@@ -33,7 +36,8 @@ def post_products(products: list[dict]) -> int:
                     price_info += f" — Now <strong>${p['price']:.2f}</strong>"
                 price_info += "</p>"
 
-            body = f"""
+            img_tag = f'<p><img src="{p["image_url"]}"/></p>' if p.get("image_url") else ""
+            body = f"""{img_tag}
 <h2>{title}</h2>
 {price_info}
 <p>{p.get('description') or title}</p>
@@ -44,27 +48,19 @@ def post_products(products: list[dict]) -> int:
                 "title": title[:255],
                 "body": body,
                 "tags": "amazon,deals,homedecor,homeorganization,DIY,homegarden,sale",
-                "native_inline_images": True,
             }
 
-            # Add image if available
-            if p.get("image_url"):
-                data["type"] = "photo"
-                data["source"] = p["image_url"]
-                data["caption"] = body
-
-            resp = requests.post(API_URL, data=data, auth=_auth(), timeout=15)
-            print(f"Tumblr status={resp.status_code} body={resp.text[:300]}")
-            if resp.status_code in (200, 201):
+            print(f"[{i+1}/{len(products)}] Posting: {title[:50]}")
+            ok = _post(data)
+            if ok:
                 posted += 1
-                print(f"Tumblr posted [{posted}]: {title[:50]}")
+                print(f"[{i+1}] OK — total={posted}")
             else:
-                print(f"Tumblr error {resp.status_code}: {resp.text[:300]}")
+                print(f"[{i+1}] FAILED")
 
-            import time
             time.sleep(1)
 
         except Exception as e:
-            print(f"Tumblr exception {p.get('asin')}: {e}")
+            print(f"[{i+1}] Exception {p.get('asin')}: {e}")
 
     return posted
