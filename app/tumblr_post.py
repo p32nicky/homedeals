@@ -38,7 +38,7 @@ def _strip_html(text: str) -> str:
 
 
 def post_products(products: list[dict]) -> int:
-    print(f"=== TUMBLR v5 LEGACY LINK url={API_URL} ===")
+    print(f"=== TUMBLR PHOTO POST url={API_URL} ===")
     posted = 0
     for i, p in enumerate(products):
         try:
@@ -50,26 +50,36 @@ def post_products(products: list[dict]) -> int:
                     price_line += f" — Now ${p['price']:.2f}"
 
             desc = _strip_html(p.get("description") or title)
-
             short_url = _shorten(p["url"])
-            data = {
-                "type": "link",
-                "title": title[:255],
-                "url": short_url,
-                "description": f"{price_line}\n\n{desc}"[:1000],
-                "tags": "amazon,deals,homedecor,homeorganization,DIY,homegarden,sale",
-            }
 
-            print(f"[{i+1}/{len(products)}] Posting: {title[:50]}")
+            caption = f'<b>{title[:200]}</b>'
+            if price_line:
+                caption += f'<br/>{price_line}'
+            caption += f'<br/>{desc[:300]}'
+            caption += f'<br/><a href="{short_url}">👉 View Deal on Amazon</a>'
+
+            image_url = p.get("image_url", "")
+
+            data = {
+                "type": "photo",
+                "caption": caption[:1500],
+                "tags": "amazon,deals,homedecor,homeorganization,DIY,homegarden,sale",
+                "link": short_url,
+            }
+            if image_url:
+                data["source"] = image_url
+
+            print(f"[{i+1}/{len(products)}] Posting photo: {title[:50]}")
+            print(f"  image_url={image_url[:80] if image_url else 'NONE'}")
             resp = requests.post(API_URL, data=data, auth=_auth(), timeout=15)
             print(f"Tumblr status={resp.status_code}")
             if resp.status_code in (200, 201):
                 posted += 1
                 print(f"[{i+1}] OK — total={posted}")
             else:
-                print(f"[{i+1}] FAILED: {resp.text[:200]}")
+                print(f"[{i+1}] FAILED: {resp.text[:300]}")
 
-            time.sleep(1)
+            time.sleep(2)
 
         except Exception as e:
             print(f"[{i+1}] Exception {p.get('asin')}: {e}")
