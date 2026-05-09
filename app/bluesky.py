@@ -6,7 +6,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-HANDLE = "amazonhomedeals.bsky.social"
+HANDLE = "amazondealshome.bsky.social"
 
 
 def post_products(products: list[dict], app_password: str) -> int:
