@@ -7,7 +7,7 @@ import requests
 from requests_oauthlib import OAuth1
 
 BLOG = "amzonhomedeals.tumblr.com"
-NPF_URL = f"https://api.tumblr.com/v2/blog/{BLOG}/posts"
+API_URL = f"https://api.tumblr.com/v2/blog/{BLOG}/post"
 
 CONSUMER_KEY    = "TxHYOvd4AVFPBTiKy3AAAbpr9ztCJdFLa8fzTvSiJ9TV3vR1zx"
 CONSUMER_SECRET = "p9rAvpJVp9CakR1XwN08jtXs797HHJumYO4MSRKdCqV14Kuh2x"
@@ -24,7 +24,7 @@ def _strip_html(text: str) -> str:
 
 
 def post_products(products: list[dict]) -> int:
-    print(f"=== TUMBLR v4 NPF API url={NPF_URL} ===")
+    print(f"=== TUMBLR v5 LEGACY LINK url={API_URL} ===")
     posted = 0
     for i, p in enumerate(products):
         try:
@@ -35,16 +35,18 @@ def post_products(products: list[dict]) -> int:
                 if p.get("price"):
                     price_line += f" — Now ${p['price']:.2f}"
 
-            desc = _strip_html(p.get("description") or "")
-            text_body = f"{title}\n{price_line}\n\n{desc}\n\n👉 {p['url']}".strip()
+            desc = _strip_html(p.get("description") or title)
 
-            payload = {
-                "content": [{"type": "text", "text": text_body}],
-                "tags": ["amazon", "deals", "homedecor", "homeorganization", "DIY", "homegarden", "sale"],
+            data = {
+                "type": "link",
+                "title": title[:255],
+                "url": p["url"],
+                "description": f"{price_line}\n\n{desc}"[:1000],
+                "tags": "amazon,deals,homedecor,homeorganization,DIY,homegarden,sale",
             }
 
             print(f"[{i+1}/{len(products)}] Posting: {title[:50]}")
-            resp = requests.post(NPF_URL, json=payload, auth=_auth(), timeout=15)
+            resp = requests.post(API_URL, data=data, auth=_auth(), timeout=15)
             print(f"Tumblr status={resp.status_code}")
             if resp.status_code in (200, 201):
                 posted += 1
