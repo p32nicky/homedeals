@@ -195,15 +195,12 @@ def list_products(db_path: str, query: str = "", page: int = 1, per_page: int = 
     return rows, total
 
 
-def get_latest_products(db_path: str, limit: int = 10, offset: int = 0):
+def get_latest_products(db_path: str, limit: int = 20, offset: int = 0):
     ph = "%s" if USE_POSTGRES else "?"
     with _get_conn(db_path) as conn:
-        total = (_one(conn, "SELECT COUNT(*) as count FROM products") or {}).get("count", 0) \
-            if USE_POSTGRES else (_one(conn, "SELECT COUNT(*) FROM products") or [0])[0]
-        safe_offset = offset % total if total else 0
         return _rows(conn,
-            f"SELECT * FROM products ORDER BY id LIMIT {ph} OFFSET {ph}",
-            (limit, safe_offset))
+            f"SELECT * FROM products ORDER BY first_seen_at DESC LIMIT {ph} OFFSET {ph}",
+            (limit, offset))
 
 
 def get_unposted_products(db_path: str, limit: int = 10) -> list[dict]:

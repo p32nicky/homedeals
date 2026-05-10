@@ -67,9 +67,7 @@ async def go(asin: str):
 
 @app.get("/feed.xml")
 async def rss_feed():
-    day = datetime.now(timezone.utc).timetuple().tm_yday
-    daily_offset = (day - 1) * 5
-    products = get_latest_products(settings.db_path, limit=5, offset=daily_offset)
+    products = get_latest_products(settings.db_path, limit=20)
 
     rss = Element("rss", version="2.0")
     rss.set("xmlns:media", "http://search.yahoo.com/mrss/")
@@ -115,7 +113,10 @@ async def rss_feed():
             media.set("url", p["image_url"])
             media.set("medium", "image")
 
-        pub_dt = now + timedelta(hours=idx * 2)
+        try:
+            pub_dt = datetime.fromisoformat(p["first_seen_at"].replace("Z", "+00:00"))
+        except Exception:
+            pub_dt = now
         SubElement(item, "pubDate").text = pub_dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
 
     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + tostring(rss, encoding="unicode")
