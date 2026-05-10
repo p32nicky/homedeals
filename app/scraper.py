@@ -95,9 +95,12 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
     results = []
     seen_asins: set = set()
 
+    REDDIT_URL_RE = re.compile(r'href="(https?://(?:www\.amazon\.[^\s"]+|amzn\.[^\s"]+))"')
+
     for feed_url in FEEDS:
+        is_reddit = "reddit.com" in feed_url
         try:
-            feed = feedparser.parse(feed_url)
+            feed = feedparser.parse(feed_url, request_headers=HEADERS)
             count = 0
             for entry in feed.entries:
                 title = (getattr(entry, "title", "") or "").strip()
@@ -107,8 +110,21 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
                 # Get link - may need to follow redirect
                 link = getattr(entry, "link", "") or ""
 
-                # Try to find ASIN in link or summary
+                # For Reddit, dig external URL out of the content/summary
                 summary = getattr(entry, "summary", "") or ""
+                if is_reddit:
+                    # Reddit link posts embed the external URL in content
+                    content_blobs = getattr(entry, "content", [])
+                    content_text = " ".join(c.get("value", "") for c in content_blobs) if content_blobs else ""
+                    full_content = summary + " " + content_text
+                    # Prefer an Amazon href found in content; fall back to link field
+                    m = REDDIT_URL_RE.search(full_content)
+                    if m:
+                        link = m.group(1)
+                    elif not _extract_asin(link):
+                        # link is Reddit permalink — skip, no Amazon URL found
+                        continue
+
                 full_text = link + " " + summary
 
                 asin = _extract_asin(full_text)
