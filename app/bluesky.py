@@ -9,6 +9,27 @@ logger = logging.getLogger(__name__)
 HANDLE = "amazondealshome.bsky.social"
 
 
+def _build_post_with_link(client, text: str, url: str):
+    """Build a post with a clickable link facet for the URL."""
+    from atproto import models
+
+    # Find byte position of URL in text
+    text_bytes = text.encode("utf-8")
+    url_bytes = url.encode("utf-8")
+    start = text_bytes.find(url_bytes)
+    if start == -1:
+        return client.send_post(text=text)
+
+    end = start + len(url_bytes)
+    facets = [
+        models.AppBskyRichtextFacet.Main(
+            index=models.AppBskyRichtextFacet.ByteSlice(byte_start=start, byte_end=end),
+            features=[models.AppBskyRichtextFacet.Link(uri=url)],
+        )
+    ]
+    return client.send_post(text=text, facets=facets)
+
+
 def post_products(products: list[dict], app_password: str) -> int:
     if not products or not app_password:
         return 0
@@ -36,12 +57,13 @@ def post_products(products: list[dict], app_password: str) -> int:
             if p.get("price"):
                 price_info += f" — Now ${p['price']:.2f}"
 
-            text = f"🏠 {title}\n{price_info}\n\n{p['url']}"
+            url = p["url"]
+            text = f"🏠 {title}\n{price_info}\n\n{url}"
             if len(text) > 300:
-                text = f"🏠 {title[:160]}\n{price_info}\n\n{p['url']}"
+                text = f"🏠 {title[:160]}\n{price_info}\n\n{url}"
 
             print(f"[{i+1}/{len(products)}] Posting: {title[:50]}")
-            client.send_post(text=text)
+            _build_post_with_link(client, text, url)
             posted += 1
             print(f"[{i+1}] OK — total posted={posted}")
             time.sleep(2)
