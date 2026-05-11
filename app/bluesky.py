@@ -57,7 +57,8 @@ def post_products(products: list[dict], app_password: str) -> int:
             if p.get("price"):
                 price_info += f" — Now ${p['price']:.2f}"
 
-            url = p["url"]
+            asin = p.get("asin", "")
+            url = f"https://homedeals-beta.vercel.app/go/{asin}" if asin else p["url"]
             text = f"🏠 {title}\n{price_info}\n\n{url}"
             if len(text) > 300:
                 text = f"🏠 {title[:160]}\n{price_info}\n\n{url}"
