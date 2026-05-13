@@ -139,7 +139,7 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
 
                 image_url = _extract_image(entry)
                 # Always use Amazon's direct image URL by ASIN
-                image_url = f"https://images-na.ssl-images-amazon.com/images/P/{asin}.01.LZZZZZZZ.jpg"
+                image_url = f"https://m.media-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_.jpg"
                 full_text_for_price = title + " " + summary
                 price = _extract_price(full_text_for_price)
                 savings_pct = _extract_savings_pct(full_text_for_price)
