@@ -57,9 +57,12 @@ async def _post_one(page, p: dict) -> bool:
     # Fill description via JS (textarea hidden behind rich text editor)
     full_desc = f"{desc}\n\nAffiliate link: {amazon_url}"
     await page.evaluate(
-        "document.querySelector('textarea[name=\"message\"]').value = arguments[0]; "
-        "document.querySelector('textarea[name=\"message\"]').dispatchEvent(new Event('input', {bubbles:true})); "
-        "document.querySelector('textarea[name=\"message\"]').dispatchEvent(new Event('change', {bubbles:true}));",
+        """(text) => {
+            const el = document.querySelector('textarea[name="message"]');
+            el.value = text;
+            el.dispatchEvent(new Event('input', {bubbles:true}));
+            el.dispatchEvent(new Event('change', {bubbles:true}));
+        }""",
         full_desc
     )
 
