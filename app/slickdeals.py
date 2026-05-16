@@ -24,12 +24,10 @@ async def _post_one(page, p: dict) -> bool:
     savings_pct = p.get("savings_percent")
     desc = (p.get("description") or title)[:1000]
 
-    # Build title string
+    # Build title string — match Slickdeals style: "Product $Price - Store"
     deal_title = title
     if price:
-        deal_title = f"{title} - ${price:.2f}"
-        if savings_pct:
-            deal_title = f"{title} - ${price:.2f} ({int(savings_pct)}% off)"
+        deal_title = f"{title} ${price:.2f} + Free Shipping - Amazon"
 
     await page.goto(SUBMIT_URL, wait_until="domcontentloaded", timeout=30000)
     await page.wait_for_timeout(3000)
