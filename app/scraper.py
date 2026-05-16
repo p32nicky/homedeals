@@ -21,11 +21,13 @@ HEADERS = {
 
 # Amazon browse nodes + search index for home categories sorted by discount
 SEARCH_URLS = [
-    "https://www.amazon.com/s?i=garden&rh=n%3A1055398&s=discount-rank",       # Home & Garden
-    "https://www.amazon.com/s?i=kitchen&rh=n%3A284507&s=discount-rank",        # Kitchen
-    "https://www.amazon.com/s?i=furniture&rh=n%3A1063306&s=discount-rank",     # Furniture
-    "https://www.amazon.com/s?i=hi&rh=n%3A6291368011&s=discount-rank",        # Home Improvement
-    "https://www.amazon.com/s?i=bed-bath&rh=n%3A1136223&s=discount-rank",     # Bed & Bath
+    "https://www.amazon.com/s?i=garden&rh=n%3A1055398&s=discount-rank&low-price=5",        # Home & Garden
+    "https://www.amazon.com/s?i=kitchen&rh=n%3A284507&s=discount-rank&low-price=5",         # Kitchen & Dining
+    "https://www.amazon.com/s?i=furniture&rh=n%3A1063306&s=discount-rank&low-price=5",      # Furniture
+    "https://www.amazon.com/s?i=hi&rh=n%3A228013&s=discount-rank&low-price=5",              # Home Improvement
+    "https://www.amazon.com/s?i=bed-bath&rh=n%3A1136223&s=discount-rank&low-price=5",      # Bed & Bath
+    "https://www.amazon.com/s?i=lawngarden&rh=n%3A2972638011&s=discount-rank&low-price=5", # Lawn & Garden
+    "https://www.amazon.com/s?i=tools&rh=n%3A468240&s=discount-rank&low-price=5",          # Tools & Home Improvement
 ]
 
 

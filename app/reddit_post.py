@@ -29,6 +29,7 @@ def post_products(products: list[dict]) -> int:
             username=USERNAME,
             password=PASSWORD,
             user_agent=f"homedeals/1.0 by u/{USERNAME}",
+            redirect_uri="http://localhost:8080",
         )
         subreddit = reddit.subreddit(SUBREDDIT)
     except Exception as e:
