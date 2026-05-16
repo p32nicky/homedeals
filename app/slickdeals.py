@@ -94,21 +94,23 @@ async def _post_one(page, p: dict) -> bool:
             await page.keyboard.press("Enter")
         await page.wait_for_timeout(500)
 
-    # Submit
-    submit_btn = await page.query_selector("input[value*='Submit'], button[type='submit']")
-    if submit_btn:
-        await submit_btn.click()
-        await page.wait_for_timeout(3000)
-        # Check for success (URL changes away from newthread)
-        if "newthread" not in page.url:
-            logger.info(f"Posted: {title[:60]}")
-            return True
-        else:
-            logger.warning(f"May have failed for {asin} — check manually")
-            return False
+    # Submit via JS (button may be off-screen)
+    clicked = await page.evaluate("""() => {
+        const btn = document.querySelector('input[type="submit"], button[type="submit"], input[value*="Submit"], button[class*="submit" i]');
+        if (btn) { btn.scrollIntoView(); btn.click(); return true; }
+        return false;
+    }""")
+    if not clicked:
+        logger.warning("No submit button found")
+        return False
 
-    logger.warning("No submit button found")
-    return False
+    await page.wait_for_timeout(4000)
+    if "newthread" not in page.url:
+        logger.info(f"Posted: {title[:60]}")
+        return True
+    else:
+        logger.warning(f"May have failed for {asin} — check Chrome manually")
+        return False
 
 
 async def _run(products: list[dict], setup: bool = False):
