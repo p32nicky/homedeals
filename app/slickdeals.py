@@ -10,7 +10,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-SESSION_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "slickdeals_session")
+CDP_URL = "http://127.0.0.1:9222"
 SUBMIT_URL = "https://slickdeals.net/forums/newthread.php?do=newthread&f=9"
 USER = "NickD4446"
 
@@ -32,11 +32,15 @@ async def _post_one(page, p: dict) -> bool:
             deal_title = f"{title} - ${price:.2f} ({int(savings_pct)}% off)"
 
     await page.goto(SUBMIT_URL, wait_until="domcontentloaded", timeout=30000)
-    await page.wait_for_timeout(2000)
+    await page.wait_for_timeout(3000)
 
     # Check still logged in
     if "login" in page.url.lower() or await page.query_selector("input[name='loginname']"):
-        logger.error("Not logged in — run with --setup first")
+        logger.error("Not logged in to Slickdeals — log in manually in Chrome first")
+        return False
+
+    if "ERR_" in await page.title():
+        logger.error(f"Page error: {await page.title()}")
         return False
 
     # Fill Deal URL field (triggers autofill)
@@ -88,27 +92,39 @@ async def _post_one(page, p: dict) -> bool:
 async def _run(products: list[dict], setup: bool = False):
     from playwright.async_api import async_playwright
 
-    os.makedirs(SESSION_DIR, exist_ok=True)
-
     async with async_playwright() as pw:
-        ctx = await pw.chromium.launch_persistent_context(
-            SESSION_DIR,
-            headless=not setup,  # show browser during setup
-            args=["--no-sandbox"],
-        )
+        try:
+            browser = await pw.chromium.connect_over_cdp(CDP_URL)
+        except Exception as e:
+            print(f"Cannot connect to Chrome on port 9222: {e}")
+            print("Run this first, then try again:")
+            print(r'  & "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222')
+            return 0
+
+        ctx = browser.contexts[0] if browser.contexts else await browser.new_context()
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
 
         if setup:
-            print("Opening Slickdeals — log in manually, then press Enter here...")
-            await page.goto("https://slickdeals.net/login.php")
-            input("Press Enter once logged in > ")
-            print("Session saved. Future runs will use this session.")
-            await ctx.close()
+            print("Connected to Chrome OK! You're ready to post.")
+            print("Run: python sync.py with POST_SLICKDEALS=1")
             return 0
 
         posted = 0
         for i, p in enumerate(products):
-            print(f"[{i+1}/{len(products)}] Posting: {p.get('title','')[:60]}")
+            title = p.get('title', '')[:80]
+            price = p.get('price')
+            pct = p.get('savings_percent')
+            print(f"\n[{i+1}/{len(products)}] {title}")
+            if price:
+                print(f"    ${price:.2f}" + (f" ({int(pct)}% off)" if pct else ""))
+            print(f"    ASIN: {p.get('asin')}")
+            choice = input("  Post? [Enter=yes / s=skip / q=quit] > ").strip().lower()
+            if choice == 'q':
+                print("Stopped.")
+                break
+            if choice == 's':
+                print("Skipped.")
+                continue
             try:
                 ok = await _post_one(page, p)
                 if ok:
@@ -117,7 +133,6 @@ async def _run(products: list[dict], setup: bool = False):
             except Exception as e:
                 logger.error(f"Error on {p.get('asin')}: {e}")
 
-        await ctx.close()
         return posted
 
 
