@@ -15,10 +15,9 @@ if os.path.exists(env_path):
                 os.environ.setdefault(k.strip(), v.strip())
 
 from app.config import get_settings
-from app.db import init_db, upsert_products, get_unposted_products, mark_bluesky_posted, get_untumblrd_products, mark_tumblr_posted, reset_bluesky_posted, reset_tumblr_posted, get_unreddited_products, mark_reddit_posted
+from app.db import init_db, upsert_products, get_unposted_products, mark_bluesky_posted, reset_bluesky_posted, get_unreddited_products, mark_reddit_posted
 from app.scraper import scrape_deals
 from app.bluesky import post_products
-from app.tumblr_post import post_products as tumblr_post_products
 
 
 def main():
@@ -62,19 +61,6 @@ def main():
             print("All products already posted to Bluesky.")
     else:
         print("BLUESKY_APP_PASSWORD not set — skipping Bluesky.")
-
-    # Post to Tumblr
-    if os.environ.get("RESET_TUMBLR"):
-        reset_tumblr_posted(settings.db_path)
-        print("Reset tumblr_posted_at for all products.")
-    tumblr_unposted = get_untumblrd_products(settings.db_path, limit=10)
-    print(f"Found {len(tumblr_unposted)} unposted products for Tumblr...")
-    if tumblr_unposted:
-        t_posted = tumblr_post_products(list(tumblr_unposted))
-        posted_asins = [p["asin"] for p in list(tumblr_unposted)[:t_posted]]
-        if posted_asins:
-            mark_tumblr_posted(settings.db_path, posted_asins)
-        print(f"Posted {t_posted} to Tumblr.")
 
     # Post to Reddit
     from app.reddit_post import post_products as reddit_post
