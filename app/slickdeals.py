@@ -54,8 +54,14 @@ async def _post_one(page, p: dict) -> bool:
     if original_price:
         await page.fill("input[name='list_price']", str(round(original_price, 2)))
 
-    # Fill description
-    await page.fill("textarea[name='message']", f"{desc}\n\nAffiliate link: {amazon_url}")
+    # Fill description via JS (textarea hidden behind rich text editor)
+    full_desc = f"{desc}\n\nAffiliate link: {amazon_url}"
+    await page.evaluate(
+        "document.querySelector('textarea[name=\"message\"]').value = arguments[0]; "
+        "document.querySelector('textarea[name=\"message\"]').dispatchEvent(new Event('input', {bubbles:true})); "
+        "document.querySelector('textarea[name=\"message\"]').dispatchEvent(new Event('change', {bubbles:true}));",
+        full_desc
+    )
 
     # Store — autocomplete field
     store_input = await page.query_selector("input[placeholder='Add one or more stores']")
