@@ -1,38 +1,28 @@
 """
-Scrape home deals from Slickdeals & DealNews RSS feeds.
-Extracts Amazon ASINs and rewrites with affiliate tag.
-No API key required. Works from any IP.
+Scrape home deals directly from Amazon Product Advertising API 5.0.
+Searches Home & Kitchen category for deals with savings.
 """
 import logging
+import os
 import re
 from datetime import datetime, timezone
-
-import feedparser
-import httpx
 
 logger = logging.getLogger(__name__)
 
 ASIN_RE = re.compile(r'/dp/([A-Z0-9]{10})')
-PRICE_RE = re.compile(r'\$\s*([\d,]+\.?\d{0,2})')
-SAVE_RE  = re.compile(r'(\d+)%\s*off', re.IGNORECASE)
 
-FEEDS = [
-    # Slickdeals - home & kitchen searches
-    "https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&forumid[]=9&q=home+organization&rss=1",
-    "https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&forumid[]=9&q=home+decor&rss=1",
-    "https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&forumid[]=9&q=kitchen+storage&rss=1",
-    "https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&forumid[]=9&q=wall+decor&rss=1",
-    "https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&forumid[]=9&q=closet+organizer&rss=1",
-    "https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&forumid[]=9&q=bathroom+accessories&rss=1",
-    # DealNews home & garden
-    "https://www.dealnews.com/l-Home-Garden.html?rss=1",
-    # Reddit deals
-    "https://www.reddit.com/r/deals/.rss?limit=50",
+SEARCH_TERMS = [
+    "home organization",
+    "home decor",
+    "kitchen storage",
+    "wall decor",
+    "closet organizer",
+    "bathroom accessories",
+    "bedding",
+    "home office",
+    "garden tools",
+    "smart home",
 ]
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; homedeals/1.0; +https://homedeals-beta.vercel.app)",
-}
 
 
 def _extract_asin(url: str):
@@ -40,135 +30,103 @@ def _extract_asin(url: str):
     return m.group(1) if m else None
 
 
-def _extract_image(entry) -> str:
-    # Try media_thumbnail
-    for t in getattr(entry, "media_thumbnail", []):
-        if t.get("url"):
-            return t["url"]
-    # Try enclosures
-    for enc in getattr(entry, "enclosures", []):
-        if "image" in enc.get("type", ""):
-            return enc.get("href", "")
-    # Try media_content
-    for mc in getattr(entry, "media_content", []):
-        if mc.get("url"):
-            return mc["url"]
-    # Try summary img tag
-    summary = getattr(entry, "summary", "") or ""
-    m = re.search(r'<img[^>]+src="([^"]+)"', summary)
-    if m:
-        return m.group(1)
-    return ""
-
-
-def _extract_price(text: str):
-    prices = PRICE_RE.findall(text)
-    if len(prices) >= 1:
-        try:
-            return float(prices[0].replace(",", ""))
-        except Exception:
-            pass
-    return None
-
-
-def _extract_savings_pct(text: str):
-    m = SAVE_RE.search(text)
-    if m:
-        try:
-            return float(m.group(1))
-        except Exception:
-            pass
-    return None
-
-
-def _follow_redirect(url: str) -> str:
-    """Follow redirect to get final Amazon URL."""
-    try:
-        r = httpx.get(url, follow_redirects=True, timeout=8, headers=HEADERS)
-        return str(r.url)
-    except Exception:
-        return url
-
-
 def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[dict]:
+    try:
+        from amazon_paapi import AmazonApi
+    except ImportError:
+        logger.error("Run: pip install python-amazon-paapi")
+        return []
+
+    if not access_key or not secret_key:
+        logger.error("Missing AMAZON_ACCESS_KEY or AMAZON_SECRET_KEY")
+        return []
+
+    amazon = AmazonApi(access_key, secret_key, associate_tag, "US")
     now = datetime.now(timezone.utc).isoformat()
     results = []
     seen_asins: set = set()
 
-    REDDIT_URL_RE = re.compile(r'href="(https?://(?:www\.amazon\.[^\s"]+|amzn\.[^\s"]+))"')
-
-    for feed_url in FEEDS:
-        is_reddit = "reddit.com" in feed_url
+    for term in SEARCH_TERMS:
         try:
-            feed = feedparser.parse(feed_url, request_headers=HEADERS)
+            resp = amazon.search_items(
+                keywords=term,
+                search_index="HomeAndKitchen",
+                item_count=10,
+                resources=[
+                    "Images.Primary.Large",
+                    "ItemInfo.Title",
+                    "Offers.Listings.Price",
+                    "Offers.Listings.SavingBasis",
+                    "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
+                    "Offers.Listings.Promotions",
+                ],
+            )
+
+            items = resp.items if resp and resp.items else []
             count = 0
-            for entry in feed.entries:
-                title = (getattr(entry, "title", "") or "").strip()
-                if not title:
-                    continue
-
-                # Get link - may need to follow redirect
-                link = getattr(entry, "link", "") or ""
-
-                # For Reddit, dig external URL out of the content/summary
-                summary = getattr(entry, "summary", "") or ""
-                if is_reddit:
-                    # Reddit link posts embed the external URL in content
-                    content_blobs = getattr(entry, "content", [])
-                    content_text = " ".join(c.get("value", "") for c in content_blobs) if content_blobs else ""
-                    full_content = summary + " " + content_text
-                    # Prefer an Amazon href found in content; fall back to link field
-                    m = REDDIT_URL_RE.search(full_content)
-                    if m:
-                        link = m.group(1)
-                    elif not _extract_asin(link):
-                        # link is Reddit permalink — skip, no Amazon URL found
+            for item in items:
+                try:
+                    asin = item.asin
+                    if not asin or asin in seen_asins:
                         continue
 
-                full_text = link + " " + summary
+                    title = (item.item_info.title.display_value
+                             if item.item_info and item.item_info.title else None)
+                    if not title:
+                        continue
 
-                asin = _extract_asin(full_text)
-                if not asin:
-                    # Follow redirect to see if it resolves to Amazon
-                    final = _follow_redirect(link)
-                    asin = _extract_asin(final)
+                    # Get price info
+                    price = None
+                    original_price = None
+                    listing = (item.offers.listings[0]
+                               if item.offers and item.offers.listings else None)
+                    if listing and listing.price:
+                        price = listing.price.amount
+                    if listing and listing.saving_basis:
+                        original_price = listing.saving_basis.amount
 
-                if not asin or asin in seen_asins:
+                    # Skip if no discount
+                    if not price or not original_price or original_price <= price:
+                        continue
+
+                    savings = round(original_price - price, 2)
+                    savings_pct = round((savings / original_price) * 100, 1)
+
+                    # Skip tiny discounts
+                    if savings_pct < 10:
+                        continue
+
+                    image_url = ""
+                    if item.images and item.images.primary and item.images.primary.large:
+                        image_url = item.images.primary.large.url
+
+                    affiliate_url = f"https://www.amazon.com/dp/{asin}/?tag={associate_tag}"
+
+                    seen_asins.add(asin)
+                    results.append({
+                        "asin": asin,
+                        "title": title,
+                        "url": affiliate_url,
+                        "image_url": image_url,
+                        "price": price,
+                        "original_price": original_price,
+                        "savings": savings,
+                        "savings_percent": savings_pct,
+                        "category": "HomeAndKitchen",
+                        "description": title,
+                        "first_seen_at": now,
+                        "last_seen_at": now,
+                    })
+                    count += 1
+
+                except Exception as e:
+                    logger.debug(f"Item parse error: {e}")
                     continue
-                seen_asins.add(asin)
 
-                image_url = _extract_image(entry)
-                # Always use Amazon's direct image URL by ASIN
-                image_url = f"https://m.media-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_.jpg"
-                full_text_for_price = title + " " + summary
-                price = _extract_price(full_text_for_price)
-                savings_pct = _extract_savings_pct(full_text_for_price)
+            logger.info(f"'{term}': {count} deals found")
 
-                original_price = None
-                if price and savings_pct:
-                    original_price = round(price / (1 - savings_pct / 100), 2)
-
-                affiliate_url = f"https://www.amazon.com/dp/{asin}/?tag={associate_tag}"
-
-                results.append({
-                    "asin": asin,
-                    "title": title,
-                    "url": affiliate_url,
-                    "image_url": image_url,
-                    "price": price,
-                    "original_price": original_price,
-                    "savings": round(original_price - price, 2) if price and original_price else None,
-                    "savings_percent": savings_pct,
-                    "category": "HomeGarden",
-                    "description": re.sub(r'<[^>]+>', '', summary)[:300].strip() or title,
-                    "first_seen_at": now,
-                    "last_seen_at": now,
-                })
-                count += 1
-
-            logger.info(f"{feed_url.split('?')[0]}: {count} Amazon products found")
         except Exception as e:
-            logger.warning(f"Feed failed {feed_url}: {e}")
+            logger.warning(f"Search failed for '{term}': {e}")
 
-    logger.info(f"Total: {len(results)} unique products")
+    logger.info(f"Total: {len(results)} unique deals from Amazon PA API")
     return results
