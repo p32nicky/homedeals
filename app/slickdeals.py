@@ -70,6 +70,38 @@ async def _post_one(page, p: dict) -> bool:
         full_desc = f"{desc}\n\nAffiliate link: {amazon_url}"
         await desc_area.fill(full_desc)
 
+    # Store — type "Amazon" into merchant/store field and pick first suggestion
+    store_input = await page.query_selector("input[name='merchant'], input[id*='store'], input[id*='merchant'], input[placeholder*='store' i], input[placeholder*='merchant' i]")
+    if store_input:
+        await store_input.fill("Amazon")
+        await page.wait_for_timeout(1500)
+        # Click first autocomplete suggestion
+        suggestion = await page.query_selector(".autocomplete-suggestion, li[data-val*='Amazon' i], [class*='suggestion']:first-child")
+        if suggestion:
+            await suggestion.click()
+        else:
+            await page.keyboard.press("Enter")
+        await page.wait_for_timeout(500)
+
+    # Category — select "Home & Garden" or closest match
+    cat_select = await page.query_selector("select[name='category'], select[id*='category'], select[name*='cat' i]")
+    if cat_select:
+        for val in ["Home & Garden", "Home", "HomeGarden", "home-garden"]:
+            try:
+                await cat_select.select_option(label=val)
+                break
+            except Exception:
+                try:
+                    await cat_select.select_option(value=val)
+                    break
+                except Exception:
+                    continue
+    else:
+        # Try clicking a category chip/button
+        cat_btn = await page.query_selector("[class*='category' i] button, label:has-text('Home')")
+        if cat_btn:
+            await cat_btn.click()
+
     # Submit
     submit_btn = await page.query_selector("input[value*='Submit'], button[type='submit']")
     if submit_btn:
