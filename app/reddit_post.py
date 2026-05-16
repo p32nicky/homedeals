@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 CLIENT_ID     = "weFtQwJPb1wsdq2IXexp7Q"
 CLIENT_SECRET = "a-mqkbBtpHICVo--xQWIAPENM_bSUw"
-USERNAME      = "NickD4446"
+USERNAME      = "Basic-Strain-6922"
 PASSWORD      = "Nd2354zx!!??"
 SUBREDDIT     = "AmazonDealsHome"
 
