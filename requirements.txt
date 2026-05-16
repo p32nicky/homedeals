@@ -9,3 +9,4 @@ atproto
 requests
 requests-oauthlib
 psycopg2-binary
+playwright

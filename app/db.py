@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS products (
     first_seen_at TEXT,
     last_seen_at TEXT,
     bluesky_posted_at TEXT,
-    tumblr_posted_at TEXT
+    tumblr_posted_at TEXT,
+    slickdeals_posted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_asin ON products(asin);
 """
@@ -77,7 +78,8 @@ CREATE TABLE IF NOT EXISTS products (
     first_seen_at TEXT,
     last_seen_at TEXT,
     bluesky_posted_at TEXT,
-    tumblr_posted_at TEXT
+    tumblr_posted_at TEXT,
+    slickdeals_posted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_asin ON products(asin);
 """
@@ -91,7 +93,7 @@ def init_db(db_path: str) -> None:
             pass
     with _get_conn(db_path) as conn:
         # Add bluesky_posted_at column if missing (migration)
-        for col in ["bluesky_posted_at", "tumblr_posted_at"]:
+        for col in ["bluesky_posted_at", "tumblr_posted_at", "slickdeals_posted_at"]:
             try:
                 if USE_POSTGRES:
                     conn.cursor().execute(f"ALTER TABLE products ADD COLUMN IF NOT EXISTS {col} TEXT")
@@ -267,6 +269,31 @@ def mark_tumblr_posted(db_path: str, asins: list[str]) -> None:
         else:
             conn.execute(
                 f"UPDATE products SET tumblr_posted_at=? WHERE asin IN ({placeholders})",
+                (now, *asins))
+
+
+def get_unslickdealed_products(db_path: str, limit: int = 5) -> list[dict]:
+    ph = "%s" if USE_POSTGRES else "?"
+    with _get_conn(db_path) as conn:
+        return _rows(conn,
+            f"SELECT * FROM products WHERE slickdeals_posted_at IS NULL AND price IS NOT NULL ORDER BY savings_percent DESC NULLS LAST LIMIT {ph}",
+            (limit,))
+
+
+def mark_slickdeals_posted(db_path: str, asins: list[str]) -> None:
+    if not asins:
+        return
+    ph = "%s" if USE_POSTGRES else "?"
+    now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+    placeholders = ",".join([ph] * len(asins))
+    with _get_conn(db_path) as conn:
+        if USE_POSTGRES:
+            conn.cursor().execute(
+                f"UPDATE products SET slickdeals_posted_at={ph} WHERE asin IN ({placeholders})",
+                (now, *asins))
+        else:
+            conn.execute(
+                f"UPDATE products SET slickdeals_posted_at=? WHERE asin IN ({placeholders})",
                 (now, *asins))
 
 

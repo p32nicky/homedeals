@@ -15,7 +15,7 @@ if os.path.exists(env_path):
                 os.environ.setdefault(k.strip(), v.strip())
 
 from app.config import get_settings
-from app.db import init_db, upsert_products, get_unposted_products, mark_bluesky_posted, get_untumblrd_products, mark_tumblr_posted, reset_bluesky_posted, reset_tumblr_posted
+from app.db import init_db, upsert_products, get_unposted_products, mark_bluesky_posted, get_untumblrd_products, mark_tumblr_posted, reset_bluesky_posted, reset_tumblr_posted, get_unslickdealed_products, mark_slickdeals_posted
 from app.scraper import scrape_deals
 from app.bluesky import post_products
 from app.tumblr_post import post_products as tumblr_post_products
@@ -75,6 +75,18 @@ def main():
         if posted_asins:
             mark_tumblr_posted(settings.db_path, posted_asins)
         print(f"Posted {t_posted} to Tumblr.")
+
+    # Post to Slickdeals (local only — needs saved browser session)
+    if os.environ.get("POST_SLICKDEALS"):
+        from app.slickdeals import post_products as slickdeals_post
+        sd_products = get_unslickdealed_products(settings.db_path, limit=3)
+        print(f"Found {len(sd_products)} products for Slickdeals...")
+        if sd_products:
+            sd_posted = slickdeals_post(list(sd_products))
+            posted_asins = [p["asin"] for p in list(sd_products)[:sd_posted]]
+            if posted_asins:
+                mark_slickdeals_posted(settings.db_path, posted_asins)
+            print(f"Posted {sd_posted} to Slickdeals.")
 
     print("Done.")
 
