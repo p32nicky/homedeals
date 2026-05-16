@@ -64,7 +64,7 @@ def main():
 
     # Post to Reddit
     from app.reddit_post import post_products as reddit_post
-    reddit_products = get_unreddited_products(settings.db_path, limit=5)
+    reddit_products = get_unreddited_products(settings.db_path, limit=100)
     print(f"Found {len(reddit_products)} unposted products for Reddit...")
     if reddit_products:
         r_posted = reddit_post(list(reddit_products))
