@@ -10,4 +10,5 @@ requests
 requests-oauthlib
 psycopg2-binary
 playwright
+beautifulsoup4
 python-amazon-paapi

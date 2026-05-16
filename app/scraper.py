@@ -1,132 +1,118 @@
 """
-Scrape home deals directly from Amazon Product Advertising API 5.0.
-Searches Home & Kitchen category for deals with savings.
+Scrape Amazon search results directly for home & kitchen deals sorted by discount.
 """
 import logging
-import os
 import re
+import time
 from datetime import datetime, timezone
+
+import httpx
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-ASIN_RE = re.compile(r'/dp/([A-Z0-9]{10})')
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "DNT": "1",
+}
 
-SEARCH_TERMS = [
-    "home organization",
-    "home decor",
-    "kitchen storage",
-    "wall decor",
-    "closet organizer",
-    "bathroom accessories",
-    "bedding",
-    "home office",
-    "garden tools",
-    "smart home",
+# Amazon browse nodes + search index for home categories sorted by discount
+SEARCH_URLS = [
+    "https://www.amazon.com/s?i=garden&rh=n%3A1055398&s=discount-rank",       # Home & Garden
+    "https://www.amazon.com/s?i=kitchen&rh=n%3A284507&s=discount-rank",        # Kitchen
+    "https://www.amazon.com/s?i=furniture&rh=n%3A1063306&s=discount-rank",     # Furniture
+    "https://www.amazon.com/s?i=hi&rh=n%3A6291368011&s=discount-rank",        # Home Improvement
+    "https://www.amazon.com/s?i=bed-bath&rh=n%3A1136223&s=discount-rank",     # Bed & Bath
 ]
 
 
-def _extract_asin(url: str):
-    m = ASIN_RE.search(url or "")
-    return m.group(1) if m else None
+def _parse_price(text: str):
+    if not text:
+        return None
+    m = re.search(r'[\d,]+\.?\d{0,2}', text.replace(',', ''))
+    try:
+        return float(m.group()) if m else None
+    except Exception:
+        return None
+
+
+def _scrape_page(url: str, associate_tag: str, seen_asins: set, now: str) -> list[dict]:
+    results = []
+    try:
+        r = httpx.get(url, headers=HEADERS, timeout=15, follow_redirects=True)
+        if r.status_code != 200:
+            logger.warning(f"HTTP {r.status_code} for {url}")
+            return results
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        products = soup.select("[data-asin]")
+
+        for el in products:
+            asin = el.get("data-asin", "").strip()
+            if not asin or len(asin) != 10 or asin in seen_asins:
+                continue
+
+            # Title
+            title_el = el.select_one("h2 a span, h2 span")
+            title = title_el.get_text(strip=True) if title_el else ""
+            if not title:
+                continue
+
+            # Sale price
+            price_el = el.select_one(".a-price[data-a-color='base'] .a-offscreen, .a-price .a-offscreen")
+            price = _parse_price(price_el.get_text() if price_el else "")
+
+            # Original price (struck through)
+            orig_el = el.select_one(".a-price[data-a-color='secondary'] .a-offscreen, .a-text-strike")
+            original_price = _parse_price(orig_el.get_text() if orig_el else "")
+
+            if not price or not original_price or original_price <= price:
+                continue
+
+            savings = round(original_price - price, 2)
+            savings_pct = round((savings / original_price) * 100, 1)
+            if savings_pct < 10:
+                continue
+
+            # Image
+            img_el = el.select_one("img.s-image, img[data-image-latency]")
+            image_url = img_el.get("src", "") if img_el else f"https://m.media-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_.jpg"
+
+            seen_asins.add(asin)
+            results.append({
+                "asin": asin,
+                "title": title,
+                "url": f"https://www.amazon.com/dp/{asin}/?tag={associate_tag}",
+                "image_url": image_url,
+                "price": price,
+                "original_price": original_price,
+                "savings": savings,
+                "savings_percent": savings_pct,
+                "category": "HomeAndKitchen",
+                "description": title,
+                "first_seen_at": now,
+                "last_seen_at": now,
+            })
+
+    except Exception as e:
+        logger.warning(f"Scrape failed {url}: {e}")
+
+    return results
 
 
 def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[dict]:
-    try:
-        from amazon_paapi import AmazonApi
-    except ImportError:
-        logger.error("Run: pip install python-amazon-paapi")
-        return []
-
-    if not access_key or not secret_key:
-        logger.error("Missing AMAZON_ACCESS_KEY or AMAZON_SECRET_KEY")
-        return []
-
-    amazon = AmazonApi(access_key, secret_key, associate_tag, "US")
     now = datetime.now(timezone.utc).isoformat()
     results = []
     seen_asins: set = set()
 
-    for term in SEARCH_TERMS:
-        try:
-            resp = amazon.search_items(
-                keywords=term,
-                search_index="HomeAndKitchen",
-                item_count=10,
-                resources=[
-                    "Images.Primary.Large",
-                    "ItemInfo.Title",
-                    "Offers.Listings.Price",
-                    "Offers.Listings.SavingBasis",
-                    "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
-                    "Offers.Listings.Promotions",
-                ],
-            )
+    for url in SEARCH_URLS:
+        items = _scrape_page(url, associate_tag, seen_asins, now)
+        logger.info(f"{url.split('?')[0]}: {len(items)} deals")
+        results.extend(items)
+        time.sleep(2)  # be polite
 
-            items = resp.items if resp and resp.items else []
-            count = 0
-            for item in items:
-                try:
-                    asin = item.asin
-                    if not asin or asin in seen_asins:
-                        continue
-
-                    title = (item.item_info.title.display_value
-                             if item.item_info and item.item_info.title else None)
-                    if not title:
-                        continue
-
-                    # Get price info
-                    price = None
-                    original_price = None
-                    listing = (item.offers.listings[0]
-                               if item.offers and item.offers.listings else None)
-                    if listing and listing.price:
-                        price = listing.price.amount
-                    if listing and listing.saving_basis:
-                        original_price = listing.saving_basis.amount
-
-                    # Skip if no discount
-                    if not price or not original_price or original_price <= price:
-                        continue
-
-                    savings = round(original_price - price, 2)
-                    savings_pct = round((savings / original_price) * 100, 1)
-
-                    # Skip tiny discounts
-                    if savings_pct < 10:
-                        continue
-
-                    image_url = ""
-                    if item.images and item.images.primary and item.images.primary.large:
-                        image_url = item.images.primary.large.url
-
-                    affiliate_url = f"https://www.amazon.com/dp/{asin}/?tag={associate_tag}"
-
-                    seen_asins.add(asin)
-                    results.append({
-                        "asin": asin,
-                        "title": title,
-                        "url": affiliate_url,
-                        "image_url": image_url,
-                        "price": price,
-                        "original_price": original_price,
-                        "savings": savings,
-                        "savings_percent": savings_pct,
-                        "category": "HomeAndKitchen",
-                        "description": title,
-                        "first_seen_at": now,
-                        "last_seen_at": now,
-                    })
-                    count += 1
-
-                except Exception as e:
-                    logger.debug(f"Item parse error: {e}")
-                    continue
-
-            logger.info(f"'{term}': {count} deals found")
-
-        except Exception as e:
-            logger.warning(f"Search failed for '{term}': {e}")
-
-    logger.info(f"Total: {len(results)} unique deals from Amazon PA API")
+    logger.info(f"Total: {len(results)} unique deals")
     return results
