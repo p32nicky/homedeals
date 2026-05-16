@@ -79,7 +79,7 @@ def main():
     # Post to Slickdeals (local only — needs saved browser session)
     if os.environ.get("POST_SLICKDEALS"):
         from app.slickdeals import post_products as slickdeals_post
-        sd_products = get_unslickdealed_products(settings.db_path, limit=3)
+        sd_products = get_unslickdealed_products(settings.db_path, limit=10)
         print(f"Found {len(sd_products)} products for Slickdeals...")
         if sd_products:
             sd_posted = slickdeals_post(list(sd_products))

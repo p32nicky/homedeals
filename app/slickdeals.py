@@ -41,66 +41,49 @@ async def _post_one(page, p: dict) -> bool:
         logger.error(f"Page error: {await page.title()}")
         return False
 
-    # Fill Deal URL field (triggers autofill)
-    url_input = await page.query_selector("input[name='dealUrl'], input[placeholder*='URL'], input[id*='dealUrl']")
-    if url_input:
-        await url_input.fill(amazon_url)
-        await page.wait_for_timeout(2000)
+    # Fill Deal URL
+    await page.fill("input[name='deal_url']", amazon_url)
+    await page.wait_for_timeout(2000)
 
     # Fill title
-    title_input = await page.query_selector("input[name='subject'], input[name='title'], input[id*='title']")
-    if title_input:
-        await title_input.fill(deal_title)
+    await page.fill("input[name='subject']", deal_title)
 
-    # Fill sale price
+    # Fill prices
     if price:
-        price_input = await page.query_selector("input[name='salePrice'], input[id*='salePrice'], input[placeholder*='Sale']")
-        if price_input:
-            await price_input.fill(str(round(price, 2)))
-
-    # Fill list/original price
+        await page.fill("input[name='final_price']", str(round(price, 2)))
     if original_price:
-        list_input = await page.query_selector("input[name='listPrice'], input[id*='listPrice'], input[placeholder*='List']")
-        if list_input:
-            await list_input.fill(str(round(original_price, 2)))
+        await page.fill("input[name='list_price']", str(round(original_price, 2)))
 
     # Fill description
-    desc_area = await page.query_selector("textarea[name='message'], textarea[id*='description'], textarea[id*='message']")
-    if desc_area:
-        full_desc = f"{desc}\n\nAffiliate link: {amazon_url}"
-        await desc_area.fill(full_desc)
+    await page.fill("textarea[name='message']", f"{desc}\n\nAffiliate link: {amazon_url}")
 
-    # Store — type "Amazon" into merchant/store field and pick first suggestion
-    store_input = await page.query_selector("input[name='merchant'], input[id*='store'], input[id*='merchant'], input[placeholder*='store' i], input[placeholder*='merchant' i]")
+    # Store — autocomplete field
+    store_input = await page.query_selector("input[placeholder='Add one or more stores']")
     if store_input:
-        await store_input.fill("Amazon")
+        await store_input.click()
+        await store_input.type("Amazon", delay=80)
         await page.wait_for_timeout(1500)
-        # Click first autocomplete suggestion
-        suggestion = await page.query_selector(".autocomplete-suggestion, li[data-val*='Amazon' i], [class*='suggestion']:first-child")
+        suggestion = await page.query_selector("li[role='option'], [class*='suggestion'], [class*='autocomplete'] li")
         if suggestion:
             await suggestion.click()
         else:
+            await page.keyboard.press("ArrowDown")
             await page.keyboard.press("Enter")
         await page.wait_for_timeout(500)
 
-    # Category — select "Home & Garden" or closest match
-    cat_select = await page.query_selector("select[name='category'], select[id*='category'], select[name*='cat' i]")
-    if cat_select:
-        for val in ["Home & Garden", "Home", "HomeGarden", "home-garden"]:
-            try:
-                await cat_select.select_option(label=val)
-                break
-            except Exception:
-                try:
-                    await cat_select.select_option(value=val)
-                    break
-                except Exception:
-                    continue
-    else:
-        # Try clicking a category chip/button
-        cat_btn = await page.query_selector("[class*='category' i] button, label:has-text('Home')")
-        if cat_btn:
-            await cat_btn.click()
+    # Category — autocomplete field
+    cat_input = await page.query_selector("input[placeholder='Add one or more categories']")
+    if cat_input:
+        await cat_input.click()
+        await cat_input.type("Home", delay=80)
+        await page.wait_for_timeout(1500)
+        suggestion = await page.query_selector("li[role='option'], [class*='suggestion'], [class*='autocomplete'] li")
+        if suggestion:
+            await suggestion.click()
+        else:
+            await page.keyboard.press("ArrowDown")
+            await page.keyboard.press("Enter")
+        await page.wait_for_timeout(500)
 
     # Submit
     submit_btn = await page.query_selector("input[value*='Submit'], button[type='submit']")
