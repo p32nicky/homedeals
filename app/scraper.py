@@ -21,13 +21,16 @@ HEADERS = {
 
 # Amazon browse nodes + search index for home categories sorted by discount
 SEARCH_URLS = [
-    "https://www.amazon.com/s?i=garden&rh=n%3A1055398&s=discount-rank&low-price=5",        # Home & Garden
-    "https://www.amazon.com/s?i=kitchen&rh=n%3A284507&s=discount-rank&low-price=5",         # Kitchen & Dining
-    "https://www.amazon.com/s?i=furniture&rh=n%3A1063306&s=discount-rank&low-price=5",      # Furniture
-    "https://www.amazon.com/s?i=hi&rh=n%3A228013&s=discount-rank&low-price=5",              # Home Improvement
-    "https://www.amazon.com/s?i=bed-bath&rh=n%3A1136223&s=discount-rank&low-price=5",      # Bed & Bath
-    "https://www.amazon.com/s?i=lawngarden&rh=n%3A2972638011&s=discount-rank&low-price=5", # Lawn & Garden
-    "https://www.amazon.com/s?i=tools&rh=n%3A468240&s=discount-rank&low-price=5",          # Tools & Home Improvement
+    "https://www.amazon.com/s?k=home+organization&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=kitchen+storage&i=kitchen&s=discount-rank",
+    "https://www.amazon.com/s?k=home+decor&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=closet+organizer&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=bathroom+accessories&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=bedding+sheets&i=bed-bath&s=discount-rank",
+    "https://www.amazon.com/s?k=wall+art+decor&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=garden+tools&i=lawngarden&s=discount-rank",
+    "https://www.amazon.com/s?k=smart+home+devices&i=electronics&s=discount-rank",
+    "https://www.amazon.com/s?k=furniture+home&i=furniture&s=discount-rank",
 ]
 
 
