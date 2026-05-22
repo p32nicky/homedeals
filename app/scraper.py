@@ -84,7 +84,12 @@ def _scrape_page(url: str, associate_tag: str, seen_asins: set, now: str) -> lis
 
             # Image
             img_el = el.select_one("img.s-image, img[data-image-latency]")
-            image_url = img_el.get("src", "") if img_el else f"https://m.media-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_.jpg"
+            # Use large image — replace small thumbnail size with SL1500
+            raw_img = img_el.get("src", "") if img_el else ""
+            if raw_img:
+                image_url = re.sub(r'\._[A-Z0-9_,]+_\.', "._SL1500_.", raw_img)
+            else:
+                image_url = f"https://m.media-amazon.com/images/P/{asin}.01._SL1500_.jpg"
 
             seen_asins.add(asin)
             results.append({

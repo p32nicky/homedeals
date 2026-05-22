@@ -67,7 +67,7 @@ async def go(asin: str):
 
 @app.get("/feed.xml")
 async def rss_feed():
-    products = get_latest_products(settings.db_path, limit=20)
+    products = get_latest_products(settings.db_path, limit=50)
 
     rss = Element("rss", version="2.0")
     rss.set("xmlns:media", "http://search.yahoo.com/mrss/")
