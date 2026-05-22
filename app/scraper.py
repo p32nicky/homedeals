@@ -29,8 +29,18 @@ SEARCH_URLS = [
     "https://www.amazon.com/s?k=bedding+sheets&i=bed-bath&s=discount-rank",
     "https://www.amazon.com/s?k=wall+art+decor&i=garden&s=discount-rank",
     "https://www.amazon.com/s?k=garden+tools&i=lawngarden&s=discount-rank",
-    "https://www.amazon.com/s?k=smart+home+devices&i=electronics&s=discount-rank",
+    "https://www.amazon.com/s?k=smart+home+devices&i=hi&s=discount-rank",
     "https://www.amazon.com/s?k=furniture+home&i=furniture&s=discount-rank",
+    "https://www.amazon.com/s?k=kitchen+gadgets&i=kitchen&s=discount-rank",
+    "https://www.amazon.com/s?k=rugs+home&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=lighting+home&i=hi&s=discount-rank",
+    "https://www.amazon.com/s?k=outdoor+furniture&i=lawngarden&s=discount-rank",
+    "https://www.amazon.com/s?k=vacuum+cleaner&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=curtains+blinds&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=storage+containers&i=kitchen&s=discount-rank",
+    "https://www.amazon.com/s?k=throw+pillows+blankets&i=bed-bath&s=discount-rank",
+    "https://www.amazon.com/s?k=air+purifier&i=garden&s=discount-rank",
+    "https://www.amazon.com/s?k=kitchen+appliances&i=kitchen&s=discount-rank",
 ]
 
 
