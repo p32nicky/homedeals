@@ -2,6 +2,7 @@
 Scrape Amazon search results directly for home & kitchen deals sorted by discount.
 """
 import logging
+import random
 import re
 import time
 from datetime import datetime, timezone
@@ -11,13 +12,22 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
-    "DNT": "1",
-}
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+]
+
+def _headers():
+    return {
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "DNT": "1",
+    }
 
 # Amazon browse nodes + search index for home categories sorted by discount
 SEARCH_URLS = [
@@ -57,7 +67,7 @@ def _parse_price(text: str):
 def _scrape_page(url: str, associate_tag: str, seen_asins: set, now: str) -> list[dict]:
     results = []
     try:
-        r = httpx.get(url, headers=HEADERS, timeout=15, follow_redirects=True)
+        r = httpx.get(url, headers=_headers(), timeout=15, follow_redirects=True)
         if r.status_code != 200:
             logger.warning(f"HTTP {r.status_code} for {url}")
             return results
@@ -132,7 +142,7 @@ def scrape_deals(access_key: str, secret_key: str, associate_tag: str) -> list[d
         items = _scrape_page(url, associate_tag, seen_asins, now)
         logger.info(f"{url.split('?')[0]}: {len(items)} deals")
         results.extend(items)
-        time.sleep(2)  # be polite
+        time.sleep(random.uniform(4, 9))  # random delay to avoid bot detection
 
     logger.info(f"Total: {len(results)} unique deals")
     return results
