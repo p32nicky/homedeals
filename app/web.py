@@ -90,8 +90,7 @@ async def rss_feed():
 
         SubElement(item, "title").text = title
         SubElement(item, "link").text = product_url
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        SubElement(item, "guid", isPermaLink="false").text = f"{product_url}#{today}"
+        SubElement(item, "guid", isPermaLink="true").text = product_url
 
         desc = p.get("description") or p["title"]
         price_info = ""

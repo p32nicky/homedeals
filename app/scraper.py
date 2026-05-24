@@ -54,6 +54,24 @@ SEARCH_URLS = [
 ]
 
 
+BLOCKLIST = [
+    "headphone", "earphone", "earbud", "wireless ear", "beats ", "airpod",
+    "razor", "shav", "trimmer", "electric shaver",
+    "clothing", "shirt", "pants", "dress", "jacket", "shoes", "sneaker",
+    "vitamin", "supplement", "protein", "health",
+    "book", "novel", "paperback", "kindle",
+    "video game", "gaming", "playstation", "xbox", "nintendo",
+    "camera", "laptop", "tablet", "phone case", "iphone",
+    "religious", "jesus", "bible", "christian",
+    "travel poster", "city skyline", "europe", "paris cafe", "prague", "banff",
+    "coffee maker" , "keurig", "nespresso",
+]
+
+def _is_home_product(title: str) -> bool:
+    t = title.lower()
+    return not any(word in t for word in BLOCKLIST)
+
+
 def _parse_price(text: str):
     if not text:
         return None
@@ -83,7 +101,7 @@ def _scrape_page(url: str, associate_tag: str, seen_asins: set, now: str) -> lis
             # Title
             title_el = el.select_one("h2 a span, h2 span")
             title = title_el.get_text(strip=True) if title_el else ""
-            if not title:
+            if not title or not _is_home_product(title):
                 continue
 
             # Sale price
