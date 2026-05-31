@@ -57,6 +57,11 @@ async def product_detail(request: Request, asin: str):
     return render("product.html", p=product, site_title=settings.site_title)
 
 
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request):
+    return render("privacy.html", site_title=settings.site_title, query="")
+
+
 @app.get("/go/{asin}")
 async def go(asin: str):
     from fastapi.responses import RedirectResponse
