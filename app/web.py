@@ -1,11 +1,10 @@
 import logging
 import os
 from datetime import datetime, timezone, timedelta
-from xml.etree.ElementTree import Element, SubElement, tostring
 
 import jinja2
 from fastapi import FastAPI, Request, Query
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -70,62 +69,6 @@ async def go(asin: str):
     return RedirectResponse(url=url, status_code=302)
 
 
-@app.get("/feed.xml")
-async def rss_feed():
-    products = get_latest_products(settings.db_path, limit=50)
-
-    rss = Element("rss", version="2.0")
-    rss.set("xmlns:media", "http://search.yahoo.com/mrss/")
-    channel = SubElement(rss, "channel")
-    SubElement(channel, "title").text = settings.site_title
-    SubElement(channel, "link").text = settings.site_url
-    SubElement(channel, "description").text = "Daily Amazon deals on home decor, DIY & organization"
-    SubElement(channel, "language").text = "en-us"
-    SubElement(channel, "lastBuildDate").text = datetime.now(timezone.utc).strftime(
-        "%a, %d %b %Y %H:%M:%S +0000"
-    )
-
-    now = datetime.now(timezone.utc)
-    for idx, p in enumerate(products):
-        item = SubElement(channel, "item")
-        product_url = f"{settings.site_url}/product/{p['asin']}"
-        title = p["title"]
-        if p.get("savings_percent"):
-            title = f"{int(p['savings_percent'])}% OFF - {title}"
-
-        SubElement(item, "title").text = title
-        SubElement(item, "link").text = product_url
-        SubElement(item, "guid", isPermaLink="true").text = product_url
-
-        desc = p.get("description") or p["title"]
-        price_info = ""
-        if p.get("price"):
-            price_info = f"Now: ${p['price']:.2f}"
-            if p.get("original_price"):
-                price_info += f" (was ${p['original_price']:.2f})"
-        p_url = p["url"]
-        SubElement(item, "description").text = (
-            f"{desc}<br/>{price_info}<br/>"
-            f'<a href="{p_url}">View on Amazon →</a>'
-        )
-
-        if p.get("image_url"):
-            enc = SubElement(item, "enclosure")
-            enc.set("url", p["image_url"])
-            enc.set("type", "image/jpeg")
-            enc.set("length", "0")
-            media = SubElement(item, "media:content")
-            media.set("url", p["image_url"])
-            media.set("medium", "image")
-
-        try:
-            pub_dt = datetime.fromisoformat(p["first_seen_at"].replace("Z", "+00:00"))
-        except Exception:
-            pub_dt = now
-        SubElement(item, "pubDate").text = pub_dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
-
-    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + tostring(rss, encoding="unicode")
-    return Response(content=xml_str, media_type="application/rss+xml")
 
 
 @app.get("/api/status")
