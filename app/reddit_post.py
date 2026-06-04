@@ -43,7 +43,7 @@ def post_products(products: list[dict]) -> int:
             title = p.get("title", "")
             price = p.get("price")
             savings_pct = p.get("savings_percent")
-            url = f"https://homedeals-beta.vercel.app/go/{asin}" if asin else p.get("url", "")
+            url = f"https://homedeals-beta.vercel.app/product/{asin}" if asin else p.get("url", "")
 
             # Build title: match Slickdeals style
             post_title = title

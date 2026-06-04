@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ p.title }} — {{ site_title }}{% endblock %}
+{% block head %}
+  <meta property="og:title" content="{{ p.title }}"/>
+  <meta property="og:image" content="{{ p.image_url }}"/>
+  <meta property="og:url" content="https://homedeals-beta.vercel.app/product/{{ p.asin }}"/>
+  <meta property="og:description" content="{{ p.description or p.title }}"/>
+  <meta property="og:type" content="product"/>
+{% endblock %}
 {% block content %}
 <div class="product-page">
   {% if p.image_url %}
