@@ -62,16 +62,19 @@ def main():
     else:
         print("BLUESKY_APP_PASSWORD not set — skipping Bluesky.")
 
-    # Post to Reddit
-    from app.reddit_post import post_products as reddit_post
-    reddit_products = get_unreddited_products(settings.db_path, limit=10)
-    print(f"Found {len(reddit_products)} unposted products for Reddit...")
-    if reddit_products:
-        r_posted = reddit_post(list(reddit_products))
-        posted_asins = [p["asin"] for p in list(reddit_products)[:r_posted]]
-        if posted_asins:
-            mark_reddit_posted(settings.db_path, posted_asins)
-        print(f"Posted {r_posted} to Reddit.")
+    # Post to Reddit (disabled by default)
+    if os.environ.get("POST_REDDIT"):
+        from app.reddit_post import post_products as reddit_post
+        reddit_products = get_unreddited_products(settings.db_path, limit=10)
+        print(f"Found {len(reddit_products)} unposted products for Reddit...")
+        if reddit_products:
+            r_posted = reddit_post(list(reddit_products))
+            posted_asins = [p["asin"] for p in list(reddit_products)[:r_posted]]
+            if posted_asins:
+                mark_reddit_posted(settings.db_path, posted_asins)
+            print(f"Posted {r_posted} to Reddit.")
+    else:
+        print("Reddit posting disabled (set POST_REDDIT=1 to enable).")
 
     print("Done.")
 
