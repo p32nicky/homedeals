@@ -2,15 +2,16 @@
 Post new products to Reddit r/AmazonDealsHome via PRAW.
 """
 import logging
+import os
 import time
 
 logger = logging.getLogger(__name__)
 
-CLIENT_ID     = "weFtQwJPb1wsdq2IXexp7Q"
-CLIENT_SECRET = "a-mqkbBtpHICVo--xQWIAPENM_bSUw"
-USERNAME      = "Basic-Strain-6922"
-PASSWORD      = "Nd2354zx!!??"
-SUBREDDIT     = "AmazonDealsHome"
+CLIENT_ID     = os.environ.get("REDDIT_CLIENT_ID", "")
+CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET", "")
+USERNAME      = os.environ.get("REDDIT_USERNAME", "")
+PASSWORD      = os.environ.get("REDDIT_PASSWORD", "")
+SUBREDDIT     = os.environ.get("REDDIT_SUBREDDIT", "AmazonHomeDealz")
 
 
 def post_products(products: list[dict]) -> int:
@@ -43,7 +44,8 @@ def post_products(products: list[dict]) -> int:
             title = p.get("title", "")
             price = p.get("price")
             savings_pct = p.get("savings_percent")
-            url = f"https://homedeals-beta.vercel.app/product/{asin}" if asin else p.get("url", "")
+            # Link directly to the Amazon affiliate URL (homedeals site is retired).
+            url = p.get("url") or (f"https://www.amazon.com/dp/{asin}/?tag=nicdav09-20" if asin else "")
 
             # Build title: match Slickdeals style
             post_title = title
